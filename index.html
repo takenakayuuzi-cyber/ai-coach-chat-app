@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>AIふりかえりコーチ</title>
+    <style>
+        body { font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
+        h1 { text-align: center; color: #333; }
+        /* ★★★ 修正箇所: チャットエリアの縦幅を500pxに広げました ★★★ */
+        #chat-area { border: 1px solid #ccc; height: 500px; overflow-y: scroll; padding: 10px; margin-bottom: 10px; background-color: #f9f9f9; border-radius: 8px; }
+        .message { margin-bottom: 10px; padding: 8px; border-radius: 8px; max-width: 80%; }
+        .user { margin-left: auto; background-color: #d1e7ff; text-align: right; }
+        .ai { margin-right: auto; background-color: #e9ecef; text-align: left; }
+        #input-container { display: flex; gap: 10px; }
+        #fukikaeri-input { flex-grow: 1; padding: 10px; border-radius: 5px; border: 1px solid #ccc; }
+        #send-button { padding: 10px 15px; border: none; background-color: #007bff; color: white; border-radius: 5px; cursor: pointer; }
+        #send-button:hover { background-color: #0056b3; }
+        #loading { color: gray; margin-top: 10px; display: none; text-align: center; }
+    </style>
+</head>
+<body>
+    <h1>🌟 ふりかえりコーチチャット 🤖</h1>
+    <div id="chat-area">
+        <div class="message ai">ふりかえりコーチへようこそ！今日の国語の学びを教えてね。</div>
+    </div>
+    
+    <div id="input-container">
+        <textarea id="fukikaeri-input" rows="3" placeholder="今日のふりかえりを入力してね！"></textarea>
+        <button id="send-button">送信</button>
+    </div>
+    <div id="loading">...コーチが考えています...</div>
+
+    <script>
+        // ★★★ ココをColabで取得した最新の公開URLに置き換えて、/feedbackを付けてください ★★★
+        const API_URL = 'https://ai-coach-app-973590247865.asia-northeast1.run.app/feedback'; 
+
+        // ページ読み込み完了後にJavaScriptを実行›
+        window.onload = function() {
+            const chatArea = document.getElementById('chat-area');
+            const inputField = document.getElementById('fukikaeri-input');
+            const loading = document.getElementById('loading');
+            const sendButton = document.getElementById('send-button'); 
+
+            function appendMessage(sender, text) {
+                const msgDiv = document.createElement('div');
+                msgDiv.className = 'message ' + sender;
+                msgDiv.innerHTML = text.replace(/\n/g, '<br>'); 
+                chatArea.appendChild(msgDiv);
+                chatArea.scrollTop = chatArea.scrollHeight; 
+            }
+
+            async function sendFukikaeri() {
+                const fukikaeri = inputField.value.trim();
+                if (!fukikaeri) return; 
+
+                sendButton.disabled = true;
+                inputField.disabled = true;
+
+                appendMessage('user', fukikaeri);
+                inputField.value = ''; 
+
+                loading.style.display = 'block'; 
+                
+                try {
+                    const response = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ fukikaeri: fukikaeri })
+                    });
+
+                    const data = await response.json();
+                    
+                    if (data.feedback) {
+                        appendMessage('ai', data.feedback);
+                    } else if (data.error) {
+                        appendMessage('ai', 'エラーが発生しました: ' + data.error + ' (サーバー設定を確認してね)');
+                    }
+
+                } catch (error) {
+                    console.error('通信エラー:', error);
+                    appendMessage('ai', 'ごめんね、コーチと通信できませんでした。 ngrok の公開URLが最新か確認してね。');
+                } finally {
+                    loading.style.display = 'none'; 
+                    sendButton.disabled = false;
+                    inputField.disabled = false;
+                    inputField.focus(); 
+                }
+            }
+
+            // ボタンクリックイベントを確実に追加
+            sendButton.addEventListener('click', sendFukikaeri);
+            
+            // Enterキーでの送信設定
+            inputField.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) { 
+                    e.preventDefault(); 
+                    sendFukikaeri();
+                }
+            });
+        }
+    </script>
+</body>
+</html>
